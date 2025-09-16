@@ -21,7 +21,8 @@ bool intel_vrr_is_capable(struct intel_connector *connector)
 	struct intel_display *display = to_intel_display(connector);
 	const struct drm_display_info *info = &connector->base.display_info;
 	struct intel_dp *intel_dp;
-
+    
+	drm_WARN(display->drm, 1, "intel_vrr_is_capable entered");
 	/*
 	 * DP Sink is capable of VRR video timings if
 	 * Ignore MSA bit is set in DPCD.
@@ -43,11 +44,16 @@ bool intel_vrr_is_capable(struct intel_connector *connector)
 
 		break;
 	default:
-		return false;
+		break;
 	}
-
-	return HAS_VRR(display) &&
+    bool result = HAS_VRR(display) &&
 		info->monitor_range.max_vfreq - info->monitor_range.min_vfreq > 10;
+	drm_WARN(display->drm, 1, "intel_vrr_is_capable result: %s\n", result ? "true" : "false");
+	drm_WARN(display->drm, 1, "Monitor Max VFreq: %u\n", info->monitor_range.max_vfreq);
+	drm_WARN(display->drm, 1, "Monitor Min VFreq: %u\n", info->monitor_range.min_vfreq);
+
+
+	return result;
 }
 
 bool intel_vrr_is_in_range(struct intel_connector *connector, int vrefresh)

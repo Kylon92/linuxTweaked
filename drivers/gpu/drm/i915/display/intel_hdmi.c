@@ -2037,15 +2037,7 @@ intel_hdmi_mode_valid(struct drm_connector *_connector,
 		clock *= 2;
 	}
 
-	/*
-	 * HDMI2.1 requires higher resolution modes like 8k60, 4K120 to be
-	 * enumerated only if FRL is supported. Current platforms do not support
-	 * FRL so prune the higher resolution modes that require doctclock more
-	 * than 600MHz.
-	 */
-	if (clock > 600000)
-		return MODE_CLOCK_HIGH;
-
+	
 	ycbcr_420_only = drm_mode_is_420_only(&connector->base.display_info, mode);
 
 	if (ycbcr_420_only)
@@ -2499,6 +2491,8 @@ intel_hdmi_set_edid(struct drm_connector *_connector)
 	intel_wakeref_t wakeref;
 	const struct drm_edid *drm_edid;
 	bool connected = false;
+    bool vrr_capable;
+
 
 	wakeref = intel_display_power_get(display, POWER_DOMAIN_GMBUS);
 
@@ -2514,6 +2508,11 @@ intel_hdmi_set_edid(struct drm_connector *_connector)
 
 	/* Below we depend on display info having been updated */
 	drm_edid_connector_update(&connector->base, drm_edid);
+
+	vrr_capable = intel_vrr_is_capable(connector);
+	drm_WARN(display->drm, 1, "[CONNECTOR:%d:%s] VRR capable: %s\n", connector->base.base.id, connector->base.name, vrr_capable ? "true" : "false");
+	drm_connector_set_vrr_capable_property(&connector->base, vrr_capable);
+
 
 	connector->detect_edid = drm_edid;
 
@@ -2655,8 +2654,10 @@ static const struct drm_connector_helper_funcs intel_hdmi_connector_helper_funcs
 static void
 intel_hdmi_add_properties(struct intel_hdmi *intel_hdmi, struct drm_connector *_connector)
 {
+	drm_WARN(display->drm, 1, "Entering intel_hdmi_add_properties");
 	struct intel_connector *connector = to_intel_connector(_connector);
 	struct intel_display *display = to_intel_display(intel_hdmi);
+	bool hasVRRResult;
 
 	intel_attach_force_audio_property(&connector->base);
 	intel_attach_broadcast_rgb_property(&connector->base);
@@ -2670,6 +2671,10 @@ intel_hdmi_add_properties(struct intel_hdmi *intel_hdmi, struct drm_connector *_
 
 	if (!HAS_GMCH(display))
 		drm_connector_attach_max_bpc_property(&connector->base, 8, 12);
+	hasVRRResult = HAS_VRR(display);
+	drm_WARN(display->drm, 1, "HasVRRResult %s\n", hasVRRResult ? "true" : "false");
+	if (hasVRRResult)
+		drm_connector_attach_vrr_capable_property(&connector->base);
 }
 
 /*
